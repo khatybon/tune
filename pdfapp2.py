@@ -7,6 +7,8 @@ from reportlab.pdfgen import canvas
 import os
 import textwrap
 import requests
+from flask_cors import CORS
+
 
 checkpoint_path = "./deepseek_finetuned_final2"
 base_model = "deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B"
@@ -20,6 +22,8 @@ model = AutoModelForCausalLM.from_pretrained(checkpoint_path).to(device)
 model.eval()
 
 app = Flask(__name__)
+CORS(app)
+
 
 def generate_recommendations(financial_data):
     """
@@ -51,7 +55,7 @@ def generate_recommendations(financial_data):
     with torch.no_grad():
         outputs = model.generate(
             **inputs,
-            max_length=4096,
+            max_length=1024,
             temperature=0.7,
             top_p=0.9,
             repetition_penalty=1.2,
@@ -119,10 +123,10 @@ def create_pdf(recommendations):
     return pdf_filename
 
 
-@app.route('/generate_recommendations', methods=['POST'])
-def generate_recommendations_endpoint():
-    app.logger.info("Sending POST request to /generate/7")
-    response = requests.post("http://127.0.0.1:5001/generate/7")
+@app.route('/generate_recommendations/<int:user_id>', methods=['POST'])
+def generate_recommendations_endpoint(user_id):
+    app.logger.info(f'Sending POST request to /generate/{user_id}')
+    response = requests.post(f'http://127.0.0.1:5001/generate/{user_id}')
     if response.status_code != 200:
         app.logger.error(f"Failed to fetch financial data: {response.status_code}")
 
@@ -137,6 +141,14 @@ def generate_recommendations_endpoint():
     financial_data = data['financial_data']
     recommendations = generate_recommendations(financial_data)
     pdf_filename = create_pdf(recommendations)
+    with open(pdf_filename, 'rb') as f:
+        files = {'file': (pdf_filename, f, 'application/pdf')}
+        try:
+            forward_response = requests.post(f'http://127.0.0.1:5001/upload_pdf/{user_id}',files=files)
+            if forward_response.status_code != 200:
+                app.logger.warning(f"Forwarding PDF failed: {forward_response.status_code}")
+        except requests.exceptions.RequestException as e:
+            app.logger.error(f"Error forwarding PDF: {str(e)}")
 
     return send_file(pdf_filename, as_attachment=True)
 
