@@ -55,7 +55,7 @@ def generate_recommendations(financial_data):
     with torch.no_grad():
         outputs = model.generate(
             **inputs,
-            max_length=1024,
+            max_length=4096,
             temperature=0.7,
             top_p=0.9,
             repetition_penalty=1.2,
@@ -77,7 +77,7 @@ def generate_recommendations(financial_data):
 
 def create_pdf(recommendations):
     """Generate a structured PDF using ReportLab."""
-    pdf_filename = "mprefinal.pdf"
+    pdf_filename = "amprefinal.pdf"
     c = canvas.Canvas(pdf_filename, pagesize=letter)
     width, height = letter
     
