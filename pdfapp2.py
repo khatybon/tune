@@ -137,7 +137,7 @@ def generate_recommendations_endpoint(user_id):
 
     if 'financial_data' not in data:
         return jsonify({"error": "Missing 'financial_data' in response"}), 400
-
+    return jsonify("ok"),200
     financial_data = data['financial_data']
     recommendations = generate_recommendations(financial_data)
     pdf_filename = create_pdf(recommendations)
